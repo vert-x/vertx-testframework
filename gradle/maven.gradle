@@ -56,6 +56,7 @@ signing {
 	sign configurations.archives
 }
 
+
 uploadArchives {
 	group 'build'
 	description = "Does a maven deploy of archives artifacts"
@@ -75,8 +76,6 @@ uploadArchives {
 			if (isReleaseVersion) {
 				beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 			}
-
-			configurePom(pom)
 		}
 	}
 }
@@ -84,15 +83,32 @@ uploadArchives {
 install {
 	group = 'build'
 	description = "Does a maven install of archives artifacts to local m2 cache"
-	configurePom(repositories.mavenInstaller.pom)
 }
 
+ext {
+  ext.poms = []
+  afterEvaluate {
+    poms*.whenConfigured { pom ->
+      pomModifications.each {
+        configure(pom, it)
+      }
+    }
+  }
+  pomModifications = []
+  modifyPom = { pomModifications << it }
+}
+
+tasks.withType(Upload) {
+  repositories.withType(org.gradle.api.artifacts.maven.MavenResolver) {
+    poms << it.pom
+  }
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // configuration methods
 
-def configurePom(def pom) {
-	pom.project {
+modifyPom {
+	project {
 		name rootProject.name
 		description 'vert.x - Effortless asynchronous application development for the modern web and enterprise'
 		groupId rootProject.group
@@ -126,5 +142,7 @@ def configurePom(def pom) {
 			setProperty('project.build.sourceEncoding', 'UTF8')
 		}
 	}
+	
+	dependencies.clear() // consumers will not inherit our dependencies
 }
 
