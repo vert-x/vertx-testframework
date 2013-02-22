@@ -181,20 +181,6 @@ public class TestBase extends TestCase {
 
   protected String startApp(boolean worker, String main, JsonObject config, int instances, boolean await) throws Exception {
     EventLog.addEvent("Starting app " + main);
-    URL url;
-    if (main.endsWith(".js") || main.endsWith(".rb") || main.endsWith(".groovy") || main.endsWith(".py") || main.endsWith(".java")) {
-      url = getClass().getClassLoader().getResource(main);
-    } else {
-      String classDir = main.replace('.', '/') + ".class";
-      url = getClass().getClassLoader().getResource(classDir);
-      String surl = url.toString();
-      String surlroot = surl.substring(0, surl.length() - classDir.length());
-      url = new URL(surlroot);
-    }
-
-    if (url == null) {
-      throw new IllegalArgumentException("Cannot find verticle: " + main);
-    }
 
     final CountDownLatch doneLatch = new CountDownLatch(1);
     final AtomicReference<String> res = new AtomicReference<>();
@@ -210,9 +196,9 @@ public class TestBase extends TestCase {
     };
 
     if (worker) {
-      platformManager.deployWorkerVerticle(false, main, config, new URL[]{url}, instances, null, doneHandler);
+      platformManager.deployWorkerVerticle(false, main, config, new URL[]{}, instances, null, doneHandler);
     } else {
-      platformManager.deployVerticle(main, config, new URL[]{url}, instances, null, doneHandler);
+      platformManager.deployVerticle(main, config, new URL[]{}, instances, null, doneHandler);
     }
 
     if (!doneLatch.await(30, TimeUnit.SECONDS)) {
