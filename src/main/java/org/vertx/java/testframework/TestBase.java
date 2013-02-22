@@ -50,7 +50,7 @@ public class TestBase extends TestCase {
   protected Vertx vertx = platformManager.getVertx();
 
   private BlockingQueue<JsonObject> events = new LinkedBlockingQueue<>();
-  private TestUtils tu;// = new TestUtils(vertx);
+  private TestUtils tu;
   private volatile Handler<Message<JsonObject>> handler;
   private List<AssertHolder> failedAsserts = new ArrayList<>();
   private List<String> startedApps = new CopyOnWriteArrayList<>();
