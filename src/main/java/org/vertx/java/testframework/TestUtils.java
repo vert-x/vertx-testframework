@@ -21,6 +21,9 @@ import org.vertx.java.core.SimpleHandler;
 import org.vertx.java.core.Vertx;
 import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.eventbus.Message;
+import org.vertx.java.core.impl.Context;
+import org.vertx.java.core.impl.DefaultVertx;
+import org.vertx.java.core.impl.WorkerContext;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.logging.Logger;
 import org.vertx.java.core.logging.impl.LoggerFactory;
@@ -42,11 +45,13 @@ public class TestUtils {
 
   private final Vertx vertx;
   private final Thread th;
+  private final Context context;
   private Map<String, Handler<Message<JsonObject>>> handlers = new HashMap<>();
 
   public TestUtils(final Vertx vertx) {
   	this.vertx = Args.notNull(vertx, "vertx");
     this.th = Thread.currentThread();
+    this.context = ((DefaultVertx)vertx).getContext();
   }
 
   public void azzert(boolean result) {
@@ -226,7 +231,10 @@ public class TestUtils {
   }
 
   public void checkThread() {
-    azzert(th == Thread.currentThread(), "Expected:" + th + " Actual:" + Thread.currentThread());
+    if (!(context instanceof WorkerContext)) {
+      azzert(th == Thread.currentThread(), "Expected:" + th + " Actual:" + Thread.currentThread());
+    }
+    azzert(context == ((DefaultVertx)vertx).getContext(), "Wrong context: Expected: " + context + " Actual: " + ((DefaultVertx)vertx).getContext());
   }
 
 }
