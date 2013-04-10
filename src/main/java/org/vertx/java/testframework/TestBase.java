@@ -18,15 +18,14 @@ package org.vertx.java.testframework;
 
 import junit.framework.TestCase;
 import org.junit.Test;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.SimpleHandler;
-import org.vertx.java.core.Vertx;
+import org.vertx.java.core.*;
 import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.logging.Logger;
 import org.vertx.java.core.logging.impl.LoggerFactory;
 import org.vertx.java.platform.PlatformLocator;
 import org.vertx.java.platform.PlatformManager;
+import org.vertx.java.platform.impl.PlatformManagerInternal;
 
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -46,8 +45,8 @@ public class TestBase extends TestCase {
   public static final String EVENTS_ADDRESS = "__test_events";
 
   // A single Vertx and DefaultPlatformManager for <b>ALL</b> tests
-  protected static PlatformManager platformManager = PlatformLocator.factory.createPlatformManager();
-  protected Vertx vertx = platformManager.getVertx();
+  protected static PlatformManagerInternal platformManager = (PlatformManagerInternal)PlatformLocator.factory.createPlatformManager();
+  protected Vertx vertx = platformManager.vertx();
 
   private BlockingQueue<JsonObject> events = new LinkedBlockingQueue<>();
   private TestUtils tu;
@@ -80,35 +79,35 @@ public class TestBase extends TestCase {
       public void handle(Message<JsonObject> message) {
         try {
 
-          String type = message.body.getString("type");
+          String type = message.body().getString("type");
 
           switch (type) {
             case EventFields.TRACE_EVENT:
-              log.trace(message.body.getString(EventFields.TRACE_MESSAGE_FIELD));
+              log.trace(message.body().getString(EventFields.TRACE_MESSAGE_FIELD));
               break;
             case EventFields.EXCEPTION_EVENT:
-              failedAsserts.add(new AssertHolder(message.body.getString(EventFields.EXCEPTION_MESSAGE_FIELD),
-                  message.body.getString(EventFields.EXCEPTION_STACKTRACE_FIELD)));
+              failedAsserts.add(new AssertHolder(message.body().getString(EventFields.EXCEPTION_MESSAGE_FIELD),
+                  message.body().getString(EventFields.EXCEPTION_STACKTRACE_FIELD)));
               break;
             case EventFields.ASSERT_EVENT:
-              boolean passed = EventFields.ASSERT_RESULT_VALUE_PASS.equals(message.body.getString(EventFields.ASSERT_RESULT_FIELD));
+              boolean passed = EventFields.ASSERT_RESULT_VALUE_PASS.equals(message.body().getString(EventFields.ASSERT_RESULT_FIELD));
               if (passed) {
               } else {
-                failedAsserts.add(new AssertHolder(message.body.getString(EventFields.ASSERT_MESSAGE_FIELD),
-                    message.body.getString(EventFields.ASSERT_STACKTRACE_FIELD)));
+                failedAsserts.add(new AssertHolder(message.body().getString(EventFields.ASSERT_MESSAGE_FIELD),
+                    message.body().getString(EventFields.ASSERT_STACKTRACE_FIELD)));
               }
               break;
             case EventFields.START_TEST_EVENT:
               //Ignore
               break;
             case EventFields.APP_STOPPED_EVENT:
-              events.add(message.body);
+              events.add(message.body());
               break;
             case EventFields.APP_READY_EVENT:
-              events.add(message.body);
+              events.add(message.body());
               break;
             case EventFields.TEST_COMPLETE_EVENT:
-              events.add(message.body);
+              events.add(message.body());
               break;
             default:
               throw new IllegalArgumentException("Invalid type: " + type);
@@ -185,12 +184,15 @@ public class TestBase extends TestCase {
     final CountDownLatch doneLatch = new CountDownLatch(1);
     final AtomicReference<String> res = new AtomicReference<>();
 
-    Handler<String> doneHandler = new Handler<String>() {
-      public void handle(String deploymentName) {
-        if (deploymentName != null) {
+    AsyncResultHandler<String> doneHandler = new AsyncResultHandler<String>() {
+      public void handle(FutureResult<String> fr) {
+        if (fr.succeeded()) {
+          String deploymentName = fr.result();
           startedApps.add(deploymentName);
+          res.set(deploymentName);
+        } else {
+          log.error("Failed to deploy app", fr.cause());
         }
-        res.set(deploymentName);
         doneLatch.countDown();
       }
     };
@@ -208,12 +210,15 @@ public class TestBase extends TestCase {
     EventLog.addEvent("App deployed");
 
     String deployID = res.get();
-
-    if (deployID != null && await) {
-      for (int i = 0; i < instances; i++) {
-        waitAppReady();
-        EventLog.addEvent("App is ready");
+    if (deployID != null) {
+      if (await) {
+        for (int i = 0; i < instances; i++) {
+          waitAppReady();
+          EventLog.addEvent("App is ready");
+        }
       }
+    } else {
+      throw new IllegalStateException("Failed to deploy");
     }
 
     return deployID;
@@ -228,12 +233,15 @@ public class TestBase extends TestCase {
     final CountDownLatch doneLatch = new CountDownLatch(1);
     final AtomicReference<String> res = new AtomicReference<>(null);
 
-    Handler<String> doneHandler = new Handler<String>() {
-      public void handle(String deploymentName) {
-        if (deploymentName != null) {
+    AsyncResultHandler<String> doneHandler = new AsyncResultHandler<String>() {
+      public void handle(FutureResult<String> fr) {
+        if (fr.succeeded()) {
+          String deploymentName = fr.result();
           startedApps.add(deploymentName);
+          res.set(deploymentName);
+        } else {
+          log.error("Failed to start module", fr.cause());
         }
-        res.set(deploymentName);
         doneLatch.countDown();
       }
     };
@@ -259,8 +267,8 @@ public class TestBase extends TestCase {
     //EventLog.addEvent("Stopping app " + appName);
     final CountDownLatch latch = new CountDownLatch(1);
     Integer instances = platformManager.listInstances().get(appName);
-    platformManager.undeploy(appName, new SimpleHandler() {
-      public void handle() {
+    platformManager.undeploy(appName, new AsyncResultHandler<Void>() {
+      public void handle(FutureResult<Void> res) {
         latch.countDown();
       }
     });

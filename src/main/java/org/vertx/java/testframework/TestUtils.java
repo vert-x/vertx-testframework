@@ -23,6 +23,7 @@ import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.impl.Context;
 import org.vertx.java.core.impl.DefaultVertx;
+import org.vertx.java.core.impl.VertxInternal;
 import org.vertx.java.core.impl.WorkerContext;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.logging.Logger;
@@ -44,14 +45,14 @@ public class TestUtils {
   private static final Logger log = LoggerFactory.getLogger(TestUtils.class);
 
   private final Vertx vertx;
+  private final Map<String, Handler<Message<JsonObject>>> handlers = new HashMap<>();
   private final Thread th;
   private final Context context;
-  private Map<String, Handler<Message<JsonObject>>> handlers = new HashMap<>();
 
   public TestUtils(final Vertx vertx) {
   	this.vertx = Args.notNull(vertx, "vertx");
     this.th = Thread.currentThread();
-    this.context = ((DefaultVertx)vertx).getContext();
+    this.context = ((VertxInternal)vertx).getContext();
   }
 
   public void azzert(boolean result) {
@@ -110,8 +111,8 @@ public class TestUtils {
   public void register(final String testName, final Handler<Void> handler) {
     Handler<Message<JsonObject>> h = new Handler<Message<JsonObject>>() {
       public void handle(Message<JsonObject> msg) {
-        if (EventFields.START_TEST_EVENT.equals(msg.body.getString(EventFields.TYPE_FIELD)) &&
-            testName.equals(msg.body.getString(EventFields.START_TEST_NAME_FIELD))) {
+        if (EventFields.START_TEST_EVENT.equals(msg.body().getString(EventFields.TYPE_FIELD)) &&
+            testName.equals(msg.body().getString(EventFields.START_TEST_NAME_FIELD))) {
           handler.handle(null);
         }
       }
@@ -232,9 +233,13 @@ public class TestUtils {
 
   public void checkThread() {
     if (!(context instanceof WorkerContext)) {
-      azzert(th == Thread.currentThread(), "Expected:" + th + " Actual:" + Thread.currentThread());
+      if (th != Thread.currentThread()) {
+        throw new IllegalStateException("Expected:" + th + " Actual:" + Thread.currentThread());
+      }
     }
-    azzert(context == ((DefaultVertx)vertx).getContext(), "Wrong context: Expected: " + context + " Actual: " + ((DefaultVertx)vertx).getContext());
+    if (context != ((VertxInternal)vertx).getContext()) {
+      throw new IllegalStateException("Wrong context: Expected: " + context + " Actual: " + ((VertxInternal)vertx).getContext());
+    }
   }
 
 }
