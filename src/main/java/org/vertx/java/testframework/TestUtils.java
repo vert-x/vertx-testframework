@@ -17,7 +17,7 @@
 package org.vertx.java.testframework;
 
 import org.vertx.java.core.Handler;
-import org.vertx.java.core.SimpleHandler;
+import org.vertx.java.core.VoidHandler;
 import org.vertx.java.core.Vertx;
 import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.eventbus.Message;
@@ -125,7 +125,7 @@ public class TestUtils {
     Method[] methods = obj.getClass().getMethods();
     for (final Method method: methods) {
       if (method.getName().startsWith("test")) {
-        register(method.getName(), new SimpleHandler() {
+        register(method.getName(), new VoidHandler() {
           public void handle() {
             try {
               method.invoke(obj, (Object[])null);
