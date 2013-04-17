@@ -185,7 +185,7 @@ public class TestBase extends TestCase {
     final AtomicReference<String> res = new AtomicReference<>();
 
     AsyncResultHandler<String> doneHandler = new AsyncResultHandler<String>() {
-      public void handle(FutureResult<String> fr) {
+      public void handle(AsyncResult<String> fr) {
         if (fr.succeeded()) {
           String deploymentName = fr.result();
           startedApps.add(deploymentName);
@@ -234,7 +234,7 @@ public class TestBase extends TestCase {
     final AtomicReference<String> res = new AtomicReference<>(null);
 
     AsyncResultHandler<String> doneHandler = new AsyncResultHandler<String>() {
-      public void handle(FutureResult<String> fr) {
+      public void handle(AsyncResult<String> fr) {
         if (fr.succeeded()) {
           String deploymentName = fr.result();
           startedApps.add(deploymentName);
@@ -268,7 +268,7 @@ public class TestBase extends TestCase {
     final CountDownLatch latch = new CountDownLatch(1);
     Integer instances = platformManager.listInstances().get(appName);
     platformManager.undeploy(appName, new AsyncResultHandler<Void>() {
-      public void handle(FutureResult<Void> res) {
+      public void handle(AsyncResult<Void> res) {
         latch.countDown();
       }
     });
