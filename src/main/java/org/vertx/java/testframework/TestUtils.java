@@ -21,8 +21,7 @@ import org.vertx.java.core.VoidHandler;
 import org.vertx.java.core.Vertx;
 import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.impl.Context;
-import org.vertx.java.core.impl.DefaultVertx;
+import org.vertx.java.core.impl.DefaultContext;
 import org.vertx.java.core.impl.VertxInternal;
 import org.vertx.java.core.impl.WorkerContext;
 import org.vertx.java.core.json.JsonObject;
@@ -47,7 +46,7 @@ public class TestUtils {
   private final Vertx vertx;
   private final Map<String, Handler<Message<JsonObject>>> handlers = new HashMap<>();
   private final Thread th;
-  private final Context context;
+  private final DefaultContext context;
 
   public TestUtils(final Vertx vertx) {
   	this.vertx = Args.notNull(vertx, "vertx");
