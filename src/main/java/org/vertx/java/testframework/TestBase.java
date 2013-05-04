@@ -267,14 +267,22 @@ public class TestBase extends TestCase {
     //EventLog.addEvent("Stopping app " + appName);
     final CountDownLatch latch = new CountDownLatch(1);
     Integer instances = platformManager.listInstances().get(appName);
+    final AtomicReference<Boolean> failed = new AtomicReference<>(false);
     platformManager.undeploy(appName, new AsyncResultHandler<Void>() {
       public void handle(AsyncResult<Void> res) {
+        if (res.failed()) {
+          log.error("Failed to undeploy", res.cause());
+          failed.set(true);
+        }
         latch.countDown();
       }
     });
     if (!latch.await(30, TimeUnit.SECONDS)) {
       EventLog.dump();
       throw new IllegalStateException("Timedout waiting for app to stop");
+    }
+    if (failed.get()) {
+      fail("Failed to undeploy");
     }
     //EventLog.addEvent("App is undeployed");
     if (wait) {
